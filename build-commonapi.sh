@@ -19,12 +19,17 @@
 
 # SETTINGS
 
-CORE_TOOLS_VERSION=3.1.12.3
-SOMEIP_TOOLS_VERSION=3.1.12.1
+#CORE_TOOLS_VERSION=3.1.12.3
+#SOMEIP_TOOLS_VERSION=3.1.12.1
+CORE_TOOLS_VERSION=3.2.0.1
+SOMEIP_TOOLS_VERSION=3.2.0.1
 
-CORE_RUNTIME_VERSION=3.1.12.4
-SOMEIP_RUNTIME_VERSION=3.1.12.12
-VSOMEIP_VERSION=2.10.21
+#CORE_RUNTIME_VERSION=3.1.12.4
+#SOMEIP_RUNTIME_VERSION=3.1.12.12
+#VSOMEIP_VERSION=2.10.21
+CORE_RUNTIME_VERSION=3.2.0
+SOMEIP_RUNTIME_VERSION=3.2.0
+VSOMEIP_VERSION=3.3.0
 
 ARCH=$(uname -m)
 
@@ -97,7 +102,7 @@ apply_patch() {
 
 install_prerequisites
 
-# Build Common API C++ Runtime
+# [1] Build Common API C++ Runtime
 cd "$BASEDIR" || fail
 git_clone https://github.com/GENIVI/capicxx-core-runtime.git
 cd capicxx-core-runtime/ || fail
@@ -108,39 +113,42 @@ try cmake ..
 try make -j4
 check_expected libCommonAPI.so
 
-# Build Boost
+# [2] Build Boost
 cd "$BASEDIR" || fail
-try wget -c https://dl.bintray.com/boostorg/release/1.64.0/source/boost_1_64_0.tar.gz
+#try wget -c https://dl.bintray.com/boostorg/release/1.64.0/source/boost_1_64_0.tar.gz
+try wget -c https://boostorg.jfrog.io/artifactory/main/release/1.64.0/source/boost_1_64_0.tar.gz
 try tar -xzf boost_1_64_0.tar.gz
 cd boost_1_64_0/
 try ./bootstrap.sh
-BOOST_ROOT=`realpath $PWD/../install`
+export BOOST_ROOT=`realpath $PWD/../install`
+#export BOOST_ROOT="/home/jhshin/work/someip/build-common-api-cpp-native/install"
 mkdir -p $BOOST_ROOT
 try ./b2 -d+2 --prefix=$BOOST_ROOT link=shared threading=multi toolset=gcc -j$(nproc) install
 
-# Build vsomeip
+# [3] Build vsomeip
 cd "$BASEDIR" || fail
-VSOMEIP_INSTALL=`realpath $PWD/install`
+export VSOMEIP_INSTALL=`realpath $PWD/build`
+export vsomeip_DIR=$PWD/build
 git_clone https://github.com/GENIVI/vsomeip.git
 cd vsomeip
 git checkout $VSOMEIP_VERSION || fail "vsomeip: Failed git checkout of $VSOMEIP_VERSION"
-apply_patch ../patch/0001-Fix-gcc8-build-error.patch
+#apply_patch ../patch/0001-Fix-gcc8-build-error.patch
 mkdir -p build
 cd build || fail
 try cmake -DBOOST_ROOT=${BOOST_ROOT} -DENABLE_SIGNAL_HANDLING=1 ..
 try make -j$(nproc)
 
-# build SomeIP CommonAPI Runtime
+# [4] build SomeIP CommonAPI Runtime
 cd "$BASEDIR" || fail
 git_clone https://github.com/GENIVI/capicxx-someip-runtime.git
 cd capicxx-someip-runtime
-git checkout $SOMEIP_RUNTIME_VERSION || fail "capicxx-dbus: Failed git checkout of $SOMEIP_RUNTIME_VERSION"
+git checkout $SOMEIP_RUNTIME_VERSION || fail "capicxx-someip: Failed git checkout of $SOMEIP_RUNTIME_VERSION"
 mkdir -p build
 cd build || fail
 try cmake -DUSE_INSTALLED_COMMONAPI=OFF ..
 try make -j$(nproc)
 
-# Create application
+# [5] Create application
 cd "$BASEDIR" || fail
 mkdir project
 cd project/ || fail
@@ -158,15 +166,17 @@ cd "$BASEDIR/project" || fail
 mkdir -p cgen
 cd cgen/ || fail
 
-try wget -c https://github.com/GENIVI/capicxx-core-tools/releases/download/$CORE_TOOLS_VERSION/commonapi-generator.zip
-try wget -c https://github.com/GENIVI/capicxx-someip-tools/releases/download/$SOMEIP_TOOLS_VERSION/commonapi_someip_generator.zip
-try unzip -u commonapi-generator.zip -d commonapi-generator
+#try wget -c https://github.com/GENIVI/capicxx-core-tools/releases/download/$CORE_TOOLS_VERSION/commonapi-generator.zip
+#try wget -c https://github.com/GENIVI/capicxx-someip-tools/releases/download/$SOMEIP_TOOLS_VERSION/commonapi_someip_generator.zip
+try wget -c https://github.com/COVESA/capicxx-core-tools/releases/download/$CORE_TOOLS_VERSION/commonapi_core_generator.zip
+try wget -c https://github.com/COVESA/capicxx-someip-tools/releases/download/$SOMEIP_TOOLS_VERSION/commonapi_someip_generator.zip
+try unzip -u commonapi_core_generator.zip -d commonapi_core_generator
 try unzip -u commonapi_someip_generator.zip -d commonapi_someip_generator
-try chmod +x ./commonapi-generator/commonapi-generator-linux-$ARCH
+try chmod +x ./commonapi_core_generator/commonapi-core-generator-linux-$ARCH
 try chmod +x ./commonapi_someip_generator/commonapi-someip-generator-linux-$ARCH
 
 # Now you find the executables of the code generators in
-# cgen/commonapi-generator and cgen/commonapi_dbus_generator, respectively.
+# cgen/commonapi_core_generator and cgen/commonapi_dbus_generator, respectively.
 # There are four versions (Linux, Windows and 64bit variants). Type uname
 # -m if you don't know if you have a 32bit or 64bit version of Linux (you
 # get i686 or x86_64). For the further description we assume that you have
@@ -175,10 +185,10 @@ try chmod +x ./commonapi_someip_generator/commonapi-someip-generator-linux-$ARCH
 # the names contain sometimes underscores and sometimes hyphen. It will
 # change in future versions.
 
-#Finally you can generate code (CommonAPI code with the commonapi-generator and CommonAPI D-Bus code with the commonapi-dbus-generator):
+#Finally you can generate code (CommonAPI code with the commonapi_core_generator and CommonAPI D-Bus code with the commonapi-dbus-generator):
 #Generate Code
 cd "$BASEDIR/project" || fail
-try ./cgen/commonapi-generator/commonapi-generator-linux-$ARCH -sk ./fidl/HelloWorld.fidl
+try ./cgen/commonapi_core_generator/commonapi-core-generator-linux-$ARCH -sk ./fidl/HelloWorld.fidl
 try ./cgen/commonapi_someip_generator/commonapi-someip-generator-linux-$ARCH ./fidl/HelloWorld.fdepl
 
 # Dirname for generated filesseems to have changed...
@@ -197,11 +207,10 @@ esac
 
 cd src-gen/$versiondir/commonapi || fail
 
-check_expected HelloWorldDBusDeployment.cpp HelloWorldDBusProxy.cpp\
-      HelloWorldDBusStubAdapter.cpp HelloWorld.hpp HelloWorldProxy.hpp\
-      HelloWorldStubDefault.hpp HelloWorldDBusDeployment.hpp\
-      HelloWorldDBusProxy.hpp  HelloWorldDBusStubAdapter.hpp\
-      HelloWorldProxyBase.hpp  HelloWorldStubDefault.cpp  HelloWorldStub.hpp
+check_expected \
+      HelloWorld.hpp HelloWorldProxy.hpp \
+      HelloWorldStubDefault.hpp \
+      HelloWorldProxyBase.hpp HelloWorldStub.hpp
 cd - || fail
 
 #If everything worked, the generated code will be in the new directory src-gen. The option -sk generates a default implementation of your interface instance in the service.
@@ -272,7 +281,6 @@ try cmake ..
 try make -j4
 
 # Your output should look similiar. In the build direcory there should be two executables now: HelloWorldClient and HelloWorldService.
-echo "For DBus HelloWorld"
 echo "You may now run $PWD/HelloWorldService &"
 echo "and $PWD/HelloWorldClient"
 # ./HelloWorldService &
