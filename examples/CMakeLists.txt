@@ -7,9 +7,7 @@ set(CMAKE_BUILD_TYPE Debug)
 include_directories(
     src-gen
     ../capicxx-core-runtime/include
-    ../capicxx-dbus-runtime/include
     ../capicxx-someip-runtime/include
-    ../dbus-1.10.10
     ../vsomeip/interface
 )
 
@@ -21,27 +19,20 @@ include_directories(
 cmake_policy(SET CMP0015 NEW)
 link_directories(
     ../capicxx-core-runtime/build
-    ../capicxx-dbus-runtime/build
     ../capicxx-someip-runtime/build
-    ../dbus-1.10.10/dbus/.libs
     ../vsomeip/build
 )
 
 add_executable(HelloWorldClient
     src/HelloWorldClient.cpp
-    src-gen/v1/commonapi/HelloWorldDBusProxy.cpp
-    src-gen/v1/commonapi/HelloWorldDBusDeployment.cpp
 )
-target_link_libraries(HelloWorldClient CommonAPI CommonAPI-DBus dbus-1)
+target_link_libraries(HelloWorldClient CommonAPI)
 
 add_executable(HelloWorldService
     src/HelloWorldService.cpp
     src/HelloWorldStubImpl.cpp
-    src-gen/v1/commonapi/HelloWorldDBusStubAdapter.cpp
-    src-gen/v1/commonapi/HelloWorldStubDefault.cpp
-    src-gen/v1/commonapi/HelloWorldDBusDeployment.cpp
 )
-target_link_libraries(HelloWorldService CommonAPI CommonAPI-DBus dbus-1)
+target_link_libraries(HelloWorldService CommonAPI)
 
 #SOMEIP examples
 add_executable(HelloWorldSomeIPClient
@@ -49,12 +40,11 @@ add_executable(HelloWorldSomeIPClient
 	src-gen/v1/commonapi/HelloWorldSomeIPProxy.cpp
 	src-gen/v1/commonapi/HelloWorldSomeIPDeployment.cpp
 )
-target_link_libraries(HelloWorldSomeIPClient CommonAPI CommonAPI-SomeIP vsomeip)
+target_link_libraries(HelloWorldSomeIPClient CommonAPI CommonAPI-SomeIP vsomeip3)
 add_executable(HelloWorldSomeIPService
 	src/HelloWorldService.cpp
 	src/HelloWorldStubImpl.cpp
 	src-gen/v1/commonapi/HelloWorldSomeIPStubAdapter.cpp
-	src-gen/v1/commonapi/HelloWorldStubDefault.cpp
 	src-gen/v1/commonapi/HelloWorldSomeIPDeployment.cpp
 )
-target_link_libraries(HelloWorldSomeIPService CommonAPI CommonAPI-SomeIP vsomeip)
+target_link_libraries(HelloWorldSomeIPService CommonAPI CommonAPI-SomeIP vsomeip3)
