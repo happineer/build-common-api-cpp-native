@@ -20,11 +20,9 @@
 # SETTINGS
 
 CORE_TOOLS_VERSION=3.1.12.3
-DBUS_TOOLS_VERSION=3.1.12.1
 SOMEIP_TOOLS_VERSION=3.1.12.1
 
 CORE_RUNTIME_VERSION=3.1.12.4
-DBUS_RUNTIME_VERSION=3.1.12.7
 SOMEIP_RUNTIME_VERSION=3.1.12.12
 VSOMEIP_VERSION=2.10.21
 
@@ -110,32 +108,6 @@ try cmake ..
 try make -j4
 check_expected libCommonAPI.so
 
-# Build Common API C++ DBus Runtime
-
-# first patched D-Bus library...
-cd "$BASEDIR" || fail
-git_clone https://github.com/GENIVI/capicxx-dbus-runtime.git
-try wget -c http://dbus.freedesktop.org/releases/dbus/dbus-1.10.10.tar.gz
-try tar -xzf dbus-1.10.10.tar.gz
-cd dbus-1.10.10/ || fail
-apply_patch ../capicxx-dbus-runtime/src/dbus-patches/capi-dbus-add-send-with-reply-set-notify.patch
-apply_patch ../capicxx-dbus-runtime/src/dbus-patches/capi-dbus-add-support-for-custom-marshalling.patch
-apply_patch ../capicxx-dbus-runtime/src/dbus-patches/capi-dbus-correct-dbus-connection-block-pending-call.patch
-try ./configure
-try make -j4
-check_expected dbus/.libs/libdbus-1.so.3
-
-# ... then Common API DBus Runtime
-cd "$BASEDIR" || fail
-cd capicxx-dbus-runtime/ || fail
-git checkout $DBUS_RUNTIME_VERSION || fail "capicxx-dbus: Failed git checkout of $DBUS_RUNTIME_VERSION"
-mkdir -p build
-cd build || fail
-export PKG_CONFIG_PATH="$BASEDIR/dbus-1.10.10"
-try cmake -DUSE_INSTALLED_COMMONAPI=OFF -DUSE_INSTALLED_DBUS=OFF ..
-try make -j4
-check_expected libCommonAPI-DBus.so
-
 # Build Boost
 cd "$BASEDIR" || fail
 try wget -c https://dl.bintray.com/boostorg/release/1.64.0/source/boost_1_64_0.tar.gz
@@ -187,13 +159,10 @@ mkdir -p cgen
 cd cgen/ || fail
 
 try wget -c https://github.com/GENIVI/capicxx-core-tools/releases/download/$CORE_TOOLS_VERSION/commonapi-generator.zip
-try wget -c https://github.com/GENIVI/capicxx-dbus-tools/releases/download/$DBUS_TOOLS_VERSION/commonapi_dbus_generator.zip
 try wget -c https://github.com/GENIVI/capicxx-someip-tools/releases/download/$SOMEIP_TOOLS_VERSION/commonapi_someip_generator.zip
 try unzip -u commonapi-generator.zip -d commonapi-generator
-try unzip -u commonapi_dbus_generator.zip -d commonapi_dbus_generator
 try unzip -u commonapi_someip_generator.zip -d commonapi_someip_generator
 try chmod +x ./commonapi-generator/commonapi-generator-linux-$ARCH
-try chmod +x ./commonapi_dbus_generator/commonapi-dbus-generator-linux-$ARCH
 try chmod +x ./commonapi_someip_generator/commonapi-someip-generator-linux-$ARCH
 
 # Now you find the executables of the code generators in
@@ -210,7 +179,6 @@ try chmod +x ./commonapi_someip_generator/commonapi-someip-generator-linux-$ARCH
 #Generate Code
 cd "$BASEDIR/project" || fail
 try ./cgen/commonapi-generator/commonapi-generator-linux-$ARCH -sk ./fidl/HelloWorld.fidl
-try ./cgen/commonapi_dbus_generator/commonapi-dbus-generator-linux-$ARCH ./fidl/HelloWorld.fidl
 try ./cgen/commonapi_someip_generator/commonapi-someip-generator-linux-$ARCH ./fidl/HelloWorld.fdepl
 
 # Dirname for generated filesseems to have changed...
